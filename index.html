@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domino</title>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    
+    <canvas id="myCanvas" width="482" height="423"></canvas>
+    <button>NAPOVEDA</button>
+    <button>DOKONCIT</button>
+    <script>
+        var image = new Image();
+
+        image.onload = function() {
+            Promise.all([
+                createImageBitmap(image, 0, 0, 482, 423),
+            ]).then(function(sprites) {
+                ctx.drawImage(sprites[0], 0, 0);
+
+                numbersInSquares = getNumbersInSquares();
+                console.log(numbersInSquares)
+            });
+        }
+
+        var filename = prompt("Zadej jméno obrázku ve formátu .bmp. (Zadej cestu relativní k pozici index.html. Tzn. pokud je soubor 'priklad01.bmp' ve stejné složce jako index.html, zadej '/priklad01.bmp'", "/priklad01.bmp")
+        // Load the sprite sheet from an image file
+        image.src = filename;
+        image.setAttribute('crossOrigin', '');
+                
+        const canvas = document.getElementById('myCanvas');
+        var ctx = canvas.getContext('2d');
+        var pixelData = canvas.getContext('2d').getImageData(482, 423, 2, 1).data;
+
+        function getNumbersInSquares () {
+            let initialX = 2;
+            let initialY = 3;
+            let tileWidth = 60;
+
+            var result = [[], [], [], [], [], [], []]
+
+            for (let b = 0; b < 7; b++) {
+                console.log("---next row---")
+                for (let a = 0; a < 8; a++) {
+                    let topLeft = false; // (17, 17)
+                    let topMid = false; // (30, 17)
+                    let topRight = false; // (45, 17)
+                    let midLeft = false; // (17, 30)
+                    let midMid = false; // (30, 30)
+                    let midRight = false; // (45, 30)
+                    let botLeft = false; // (17, 45)
+                    let botMid = false; // (30, 45)
+                    let botRight = false; // (45, 45)
+
+
+                    if (ctx.getImageData(17+tileWidth*a, 17+tileWidth*b, 1, 1).data[0] < 100) {
+                        topLeft = true;
+                    }
+                    if (ctx.getImageData(30+tileWidth*a, 17+tileWidth*b, 1, 1).data[0] < 100) {
+                        topMid = true;
+                    }
+                    if (ctx.getImageData(45+tileWidth*a, 17+tileWidth*b, 1, 1).data[0] < 100) {
+                        topRight = true;
+                    }
+                    if (ctx.getImageData(17+tileWidth*a, 30+tileWidth*b, 1, 1).data[0] < 100) {
+                        midLeft = true;
+                    }
+                    if (ctx.getImageData(30+tileWidth*a, 30+tileWidth*b, 1, 1).data[0] < 100) {
+                        midMid = true;
+                    }
+                    if (ctx.getImageData(45+tileWidth*a, 30+tileWidth*b, 1, 1).data[0] < 100) {
+                        midRight = true;
+                    }
+                    if (ctx.getImageData(17+tileWidth*a, 45+tileWidth*b, 1, 1).data[0] < 100) {
+                        botLeft = true;
+                    }
+                    if (ctx.getImageData(30+tileWidth*a, 45+tileWidth*b, 1, 1).data[0] < 100) {
+                        botMid = true;
+                    }
+                    if (ctx.getImageData(45+tileWidth*a, 45+tileWidth*b, 1, 1).data[0] < 100) {
+                        botRight = true
+                    }
+
+                    // 0
+                    if (!(topLeft || topMid || topRight || midLeft || midMid || midRight || botLeft || botMid || botRight)) {
+                        result[b].push("0");
+                    }
+                    // 1
+                    if (!topLeft && !topMid && !topRight && !midLeft && midMid && !midRight && !botLeft && !botMid && !botRight) {
+                        result[b].push("1");
+                    }
+                    // 2
+                    if (topLeft && !topMid && !topRight && !midLeft && !midMid && !midRight && !botLeft && !botMid && botRight) {
+                        result[b].push("2 h");
+                    }
+                    if (!topLeft && !topMid && topRight && !midLeft && !midMid && !midRight && botLeft && !botMid && !botRight) {
+                        result[b].push("2 v");
+                    }
+                    // 3 
+                    if (topLeft && !topMid && !topRight && !midLeft && midMid && !midRight && !botLeft && !botMid && botRight) {
+                        result[b].push("3 h");
+                    }
+                    if (!topLeft && !topMid && topRight && !midLeft && midMid && !midRight && botLeft && !botMid && !botRight) {
+                        result[b].push("3 v");
+                    }
+                    // 4
+                    if (topLeft && !topMid && topRight && !midLeft && !midMid && !midRight && botLeft && !botMid && botRight) {
+                        result[b].push("4");
+                    }
+                    // 5
+                    if (topLeft && !topMid && topRight && botLeft && !botMid && botRight && !midLeft && midMid && !midRight){
+                        result[b].push("5");
+                    }
+                    // 6 
+                    if (topLeft && !topMid && topRight && botLeft && !botMid && botRight && midLeft && !midMid && midRight) {
+                        result[b].push("6 v");
+                    }
+                    if (topLeft && topMid && topRight && botLeft && botMid && botRight && !midLeft && !midMid && !midRight) {
+                        result[b].push("6 h");
+                    }
+                }
+            }
+            return result
+        }
+    
+        
+        var numbersInSquares = [];
+        var clickedSquares = [];
+        var occupied = []
+
+        canvas.addEventListener('click', function(event) {
+            let x, y, dir;
+            [x, y, dir] = getClickedSquare(event);
+
+            if (x > 6 && dir == "hor") {
+                return
+            }
+            if (y > 5 && dir == "ver") {
+                return
+            }
+
+            if (y+1 < 6) {
+            if ((numbersInSquares[y][x].includes("h") || numbersInSquares[y+1][x].includes("h")) && dir == "ver") {
+                alert("Nemožný tah. Tato dominová kostka obsahuje horizontální políčko.")
+                return
+            }}
+            if (x < 7) {
+            if ((numbersInSquares[y][x].includes("v") || numbersInSquares[y][x+1].includes("v")) && dir == "hor") {
+                alert("Nemožný tah. Tato dominová kostka obsahuje vertikální políčko.")
+                return
+            }}
+            
+            let xy = x.toString() + y.toString()
+            let zh = clickedSquares.indexOf(xy + "h");
+            let zv = clickedSquares.indexOf(xy + "v");
+
+
+            if (zh != -1 && dir == "hor") {
+                // cancel
+                ctx.beginPath();
+                ctx.rect(4+(x*60), 5+(y*60), 54*2+6, 54);
+                ctx.lineWidth = "4";
+                ctx.strokeStyle = "rgb(212, 208, 199)";
+                ctx.stroke();
+                clickedSquares.splice(zh, 1);
+
+                occupied.splice(occupied.indexOf(xy), 2)
+                return;
+            }
+            if (zv != -1 && dir == "ver"){
+                ctx.beginPath();
+                ctx.rect(4+(x*60), 5+(y*60), 54, 54*2+6);
+                ctx.lineWidth = "4";
+                ctx.strokeStyle = "rgb(212, 208, 199)";
+                ctx.stroke();
+                clickedSquares.splice(zv, 1);
+                
+                occupied.splice(occupied.indexOf(xy), 2)
+                return;
+            }  
+            
+            if (dir == "hor" && (occupied.indexOf(xy) != -1 || occupied.indexOf((parseInt(x)+1).toString() + y.toString()) != -1))
+            {
+                alert("Nemožný tah. Aspoň jedno z polí je již označené.")
+                dir = ""
+            }
+            if (dir == "ver" && (occupied.indexOf(xy) != -1 || occupied.indexOf(x.toString() + (parseInt(y)+1).toString()) != -1)) {
+                alert("Nemožný tah. Aspoň jedno z polí je již označené.")
+                dir = ""
+            }
+            // Horizontal
+            if (dir == "hor") {
+                occupied.push(xy)
+                occupied.push((parseInt(x)+1).toString() + y.toString())
+                console.log("THIS", (parseInt(x)+1).toString() + y.toString())
+
+                clickedSquares.push(xy + "h")
+                ctx.beginPath();
+                ctx.rect(4+(x*60), 5+(y*60), 54*2+6, 54);
+                ctx.lineWidth = "3";
+                ctx.strokeStyle = "red";
+                ctx.stroke();
+            }
+            
+            // vertical
+            if (dir == "ver") {
+                occupied.push(xy)
+                occupied.push(x.toString() + (parseInt(y)+1).toString())
+                clickedSquares.push(xy + "v")
+                ctx.beginPath();
+                ctx.rect(4+(x*60), 5+(y*60), 54, 54*2+6);
+                ctx.lineWidth = "3";
+                ctx.strokeStyle = "blue";
+                ctx.stroke();
+            }
+
+            function downloadImage(data, filename = 'untitled.jpeg') {
+                var a = document.createElement('a');
+                a.href = data;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+            }
+            
+            
+            if (occupied.length == 56) {
+                alert("Dokončil jsi domino. Po stisknutí 'OK' se ukáže vyskakovací okno.")
+                var crazyDataUrl = canvas.toDataURL("image/bmp").replace("image/png", "image/octet-stream");
+                downloadImage(crazyDataUrl, filename + "_result.bmp")
+            }
+        });
+
+        function getClickedSquare(event) {
+            let x = event.layerX;
+            let y = event.layerY;
+
+            let direction = 0;
+            if (x%60 >= 45 || x % 60 <= 15) {
+                direction = "hor";
+                if (x%60 <= 15) {
+                    x -= 60;
+                }
+            }
+            else if (y%60 >= 45 || y%60 <= 15) {
+                direction = "ver";
+                if (y%60 <= 15) {
+                    y -= 60;
+                }
+            }
+
+            return [Math.max(Math.floor(x/60), 0), Math.floor(y/60), direction]
+        }
+        </script>
+</body>
+</html>
